@@ -3,6 +3,7 @@ from pygame.locals import *
 
 black = (0,0,0)
 white = (255,255,255)
+grey = (120,120,120)
 blue = (0,0,255)
 red = (255,0,0)
 green = (20,230,20)
@@ -16,16 +17,20 @@ def main():
 
     pygame.init()
 
-    global gamewindow
+    global gamewindow, coords, buildings, buttons
     
     gamewindow = pygame.display.set_mode((BOARDWIDTH,BOARDHEIGHT))
-    buildcitybutton=buildButton('city',100,440,60,20)
+    buildcitybutton=buildButton('city',100,450,60,20)
+    buildroadbutton=buildButton('road',30,450,60,20)
     
     mousex = 0
     mousey = 0
 
     coords=makeCoord() #list of coordinates, (x,y,status)
     buildings=[] # list of all the buildings, (type,point or points)
+    buttons=[buildcitybutton,buildroadbutton]
+
+    buildings.append(construction('road',[19,26]))
 
     # figure out the road code, make it so a single road starts in the middle
     # then build from there, get the roads and cities to work according to the
@@ -36,7 +41,7 @@ def main():
     while True:
 
         
-        drawBoard(coords,buildings)
+        drawBoard()
 
         mouseClicked = False
 
@@ -61,17 +66,14 @@ def main():
 
         # building cities
         if buildcitybutton.checkForMouse(mousex,mousey)==True and mouseClicked==True:
-            if buildcitybutton.pressed==True:
-                buildcitybutton.pressed=False
-            else:
-                buildcitybutton.pressed=True
-                buildcitybutton.buildcity(coords,buildings)
+            buildcitybutton.buildcity()
+
+        # building roads
+        if buildroadbutton.checkForMouse(mousex,mousey)==True and mouseClicked==True:
+            buildroadbutton.buildroad()
 
 
-        pygame.display.set_caption(str(point))
-        buildcitybutton.update()
-
-                
+        pygame.display.set_caption(str(point))                
         pygame.display.update()
 
 def makeCoord():
@@ -83,7 +85,7 @@ def makeCoord():
             coords.append(coordinate(x,y,0))
     for cord in coords:
         if keeps[coords.index(cord)]=='1':
-            cord.status=2
+            cord.status=1
         
     return coords
 
@@ -97,22 +99,38 @@ def getCoord(x,y,coords):
     return None
 
 
-def drawBoard(coords,construction):
+def drawBoard():
     gamewindow.fill(white)
+    
+    for butt in buttons:
+        pygame.draw.rect(gamewindow,butt.boxcolor,butt.box)
+        txtobj=pygame.font.Font(None,30)
+        txt=txtobj.render(butt.function,False,butt.fontcolor)
+        gamewindow.blit(txt,butt.box)
+        
     for cord in coords:
         cord.update()
         pygame.draw.circle(gamewindow,cord.color,(cord.x,cord.y),5)
-    for building in construction:
-        if building.kind=='city':
-            pygame.draw.circle(gamewindow,purple,(coords[building.points[0]].x,coords[building.points[0]].y),3)
+        
+    for structure in buildings:
+        if structure.kind=='city':
+            x=coords[structure.points[0]].x
+            y=coords[structure.points[0]].y
+            pygame.draw.lines(gamewindow,purple,True,[(x+6,y+6),(x-1,y-8),(x-7,y+6)],3)
+
+        if structure.kind=='road':
+            x1=coords[structure.points[0]].x
+            y1=coords[structure.points[0]].y
+            x2=coords[structure.points[1]].x
+            y2=coords[structure.points[1]].y
+            pygame.draw.line(gamewindow,grey,(x1,y1),(x2,y2),3)
 
 class buildButton:
     
     def __init__(self,function,left,top,width,height):
         self.function = function
-        self.pressed = False
         self.box=pygame.Rect((left,top),(width,height))
-        self.boxcolor=green
+        self.boxcolor=blue
         self.fontcolor=yellow
 
     def checkForMouse(self,x,y):
@@ -120,35 +138,35 @@ class buildButton:
             return True
         return False
 
-    def buildcity(self,coords,buildings):
+    def buildcity(self):
         if self.function=='city':
             for cord in coords:
                 if cord.status==2 and cord.selected==True:
-                    cord.status=3
                     buildings.append(construction('city',[coords.index(cord)]))
-                    self.pressed=False
                     cord.selected=False
                 else:
                     cord.selected=False
-                    self.pressed=False
 
-    def buildroad(self,coords,a,b):
+    def buildroad(self):
+        points=[]
         if self.function=='road':
-            coords[a].status,coords[b].status=4
-            self.pressed=False
-
-    def update(self):
-        if self.pressed==True:
-            self.boxcolor=yellow
-            self.fontcolor=green
+            for cord in coords:
+                if cord.selected==True:
+                    points.append(coords.index(cord))
+                    
+        a=points[0]
+        b=0
+        if len(points)>1:
+            b=points[1]
+        
+        if (coords[a].status==2 or coords[b].status==2) and (abs(a-b) in [1,7,9]) and len(points)>1:
+            buildings.append(construction('road',[a,b]))
+            coords[a].selected=False
+            coords[b].selected=False
         else:
-            self.boxcolor=green
-            self.fontcolor=yellow
-            
-        pygame.draw.rect(gamewindow,self.boxcolor,self.box)
-        txtobj=pygame.font.Font(None,30)
-        txt=txtobj.render(self.function,False,self.fontcolor)
-        gamewindow.blit(txt,self.box)
+            coords[a].selected=False
+            coords[b].selected=False
+
         
 class construction:
     def __init__(self,kind,points):
@@ -168,6 +186,13 @@ class coordinate:
         self.selected=False
 
     def update(self):
+        roads=0
+        for road in buildings:
+            if road.kind=='road':
+                if coords.index(self) in road.points:
+                    roads+=1
+        if roads==1:
+            self.status=2
         if self.selected==True:
             self.color=blue
         else:
