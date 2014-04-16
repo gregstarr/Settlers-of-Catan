@@ -1,6 +1,7 @@
 import pygame, sys
 from pygame.locals import *
 
+# Colors
 black = (0,0,0)
 white = (255,255,255)
 grey = (120,120,120)
@@ -13,6 +14,7 @@ yellow = (255,255,0)
 BOARDWIDTH = 640
 BOARDHEIGHT = 480
 
+# Main game function
 def main():
 
     pygame.init()
@@ -20,9 +22,12 @@ def main():
     global gamewindow, coords, buildings, buttons
     
     gamewindow = pygame.display.set_mode((BOARDWIDTH,BOARDHEIGHT))
+
+    # Buttons for city and road
     buildcitybutton=buildButton('city',100,450,60,20)
     buildroadbutton=buildButton('road',30,450,60,20)
-    
+
+    # keeps track of mouse position    
     mousex = 0
     mousey = 0
 
@@ -32,20 +37,19 @@ def main():
 
     buildings.append(construction('road',[19,26]))
 
-    # figure out the road code, make it so a single road starts in the middle
-    # then build from there, get the roads and cities to work according to the
-    # rules, then work on developing resources
+    # fix building cities so that you can't build cities next to each other
+    # make resources
 
 
-    
+    # happens constantly
     while True:
 
         
-        drawBoard()
+        drawBoard() #function that keeps the board updated
 
         mouseClicked = False
 
-        # events, quitting
+        # quitting and mouse position updater
         for event in pygame.event.get():
             if event.type==QUIT:
                 pygame.quit()
@@ -76,7 +80,7 @@ def main():
         pygame.display.set_caption(str(point))                
         pygame.display.update()
 
-def makeCoord():
+def makeCoord(): # sets up initial coordinates
     coords=[]
     keeps='00011000011001101001100101100110100110010110011000011000'
     
@@ -90,6 +94,9 @@ def makeCoord():
     return coords
 
 def getCoord(x,y,coords):
+    # returns which coordinate the mouse is
+    # over (when passed the mouse's coordinates)
+    
     for cord in coords:
         left = cord.x -3
         top = cord.y - 3
@@ -99,7 +106,7 @@ def getCoord(x,y,coords):
     return None
 
 
-def drawBoard():
+def drawBoard(): # draws and updates the board
     gamewindow.fill(white)
     
     for butt in buttons:
@@ -126,6 +133,8 @@ def drawBoard():
             pygame.draw.line(gamewindow,grey,(x1,y1),(x2,y2),3)
 
 class buildButton:
+    # class for buttons, keeps track of
+    # function(road or city) and where the button is
     
     def __init__(self,function,left,top,width,height):
         self.function = function
@@ -133,12 +142,12 @@ class buildButton:
         self.boxcolor=blue
         self.fontcolor=yellow
 
-    def checkForMouse(self,x,y):
+    def checkForMouse(self,x,y): # returns whether mouse is touching button
         if self.box.collidepoint(x,y):
             return True
         return False
 
-    def buildcity(self):
+    def buildcity(self): # builds a city
         if self.function=='city':
             for cord in coords:
                 if cord.status==2 and cord.selected==True:
@@ -147,7 +156,7 @@ class buildButton:
                 else:
                     cord.selected=False
 
-    def buildroad(self):
+    def buildroad(self): # builds a road
         points=[]
         if self.function=='road':
             for cord in coords:
@@ -168,13 +177,13 @@ class buildButton:
             coords[b].selected=False
 
         
-class construction:
+class construction: # class to keep track of buildings (road,city)
     def __init__(self,kind,points):
         self.kind=kind
         self.points=points
         
 
-class coordinate:
+class coordinate: # class for the coordinates
 
     colors=[white,black,green,red]
 
@@ -186,6 +195,8 @@ class coordinate:
         self.selected=False
 
     def update(self):
+        # changes color if selected, changes
+        # status if connected by road
         roads=0
         for road in buildings:
             if road.kind=='road':
