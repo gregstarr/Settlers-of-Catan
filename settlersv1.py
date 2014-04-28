@@ -125,10 +125,10 @@ def main():
 
 def makeCoord(): # sets up initial coordinates
     coords=[]
-    keeps='00011000011001101001100101100110100110010110011000011000'
-    
-    for x in range(640)[60::90]:
-        for y in range(480)[20::60]:
+    keeps='000001100000000110011000011001100110100110011001011001100110100110011001011001100110100110011001011001100110000110011000000001100000'
+    print(len(keeps))
+    for x in range(640)[60::53]:
+        for y in range(480)[20::39]:
             coords.append(coordinate(x,y))
     for cord in coords:
         if keeps[coords.index(cord)]=='1':
@@ -260,7 +260,7 @@ def nextTurn():
             turncount+=1
 
         # roll dice
-        diceroll = random.randint(1,5)+random.randint(1,5)
+        diceroll = random.randint(1,6)+random.randint(1,6)
         dice=diceroll
         
         # allocate resources
@@ -298,7 +298,7 @@ def buildcity(): # builds a city
         
     for city in buildings: # check for cities within 1 space
         if city.kind=='city':
-            if abs(city.points[0]-coords.index(selected[0])) in [1,7,9]:
+            if abs(city.points[0]-coords.index(selected[0])) in [1,11,13]:
                 citynear=True
 
     if citynear==False and selected[0].status==currentplayer+1: # if the space is buildable, then build
@@ -322,7 +322,7 @@ def buildroad(): # builds a road
     if len(points)>1:
         b=points[1]
     
-    if (coords[a].status==currentplayer+1 or coords[b].status==currentplayer+1 or turncount==0) and (abs(a-b) in [1,7,9]) and len(points)>1 and players[currentplayer].rec['brick']>=1 and players[currentplayer].rec['wood']>=1:
+    if (coords[a].status==currentplayer+1 or coords[b].status==currentplayer+1 or turncount==0) and (abs(a-b) in [1,11,13]) and len(points)>1 and players[currentplayer].rec['brick']>=1 and players[currentplayer].rec['wood']>=1:
         buildings.append(construction('road',[a,b]))
         players[currentplayer].rec['wood']-=1
         players[currentplayer].rec['brick']-=1
@@ -340,7 +340,7 @@ class construction: # class to keep track of buildings (road,city)
 class resourceTile: # class to keep track of resource tiles (hexagons)
     resources=['wheat','wood','brick','stone']
     colors=[(227,169,34),(176,121,58),(212,91,51),(168,168,168)]
-    diceNumbers=[3,4,5,6,7,8,9]
+    diceNumbers=[6,4,6,3,5,3,5,11,2,0,8,9,4,10,9,10,8,11,12]
     N=0
     
     def __init__(self,points):
@@ -349,12 +349,12 @@ class resourceTile: # class to keep track of resource tiles (hexagons)
         resourceTile.N+=1
         self.rec=random.choice(resourceTile.resources)
         self.dice=resourceTile.diceNumbers[self.num]
-        self.box=((coords[points[0]].x+80,coords[points[0]].y+10),(40,40))
+        self.box=((coords[points[0]].x+45,coords[points[0]].y+10),(40,40))
 
 def makeTiles():
     tiles=[]
-    for a in [3,9,13,19,25,29,35]:
-        tiles.append(resourceTile([a,a+7,a+16,a+17,a+10,a+1]))
+    for a in [5,15,25,19,29,39,49,33,43,53,63,73,57,67,77,87,81,91,101]:
+        tiles.append(resourceTile([a,a+11,a+24,a+25,a+14,a+1]))
     return tiles
 
 class player:
