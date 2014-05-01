@@ -1,3 +1,6 @@
+# Make the trading system, also make sure you can trade in
+# 4 resources of one kind for 1 of another
+
 import pygame, sys, random
 from pygame.locals import *
 
@@ -19,7 +22,7 @@ def main():
 
     pygame.init()
 
-    global gamewindow, coords, buildings, buttons, tiles, turncount, players, currentplayer, dice
+    global gamewindow, error, coords, buildings, buttons, tiles, turncount, players, currentplayer, dice
     
     gamewindow = pygame.display.set_mode((BOARDWIDTH,BOARDHEIGHT))
 
@@ -37,16 +40,19 @@ def main():
     buildings=[] # list of all the buildings, (type,point or points)
     tiles=makeTiles() # list of resource tiles
     buttons=[buildcitybutton,buildroadbutton,nextTurnButton] # list of buttons
+    
 
     setupButtons=[]
     for i in range(5)[2:]:
-        setupButtons.append(buildButton(i,130+i*45,240,40,40))
+        setupButtons.append(buildButton(i,130+i*45,400,40,40))
 
-    screen = 'setup'
+    screen = 'instructions'
     players = []
     currentplayer = 0
     dice=0
     turncount=0
+    errorTimer=0
+    error=False
 
 
     # happens constantly
@@ -65,19 +71,41 @@ def main():
                 mousex,mousey = event.pos
                 mouseClicked = True
 
-                
-        if screen == 'setup':
+        if screen == 'instructions':
 
             gamewindow.fill(white)
-
-            # Game Title
-            welcomeBox=(40,40,560,50)
+            
+            welcomeBox=(40,20,560,50)
             welcomeText=pygame.font.Font(None,55)
             welcome=welcomeText.render('Welcome to Settlers of Catan',False,purple)
             gamewindow.blit(welcome,welcomeBox)
 
-            # Instructions for choosing players
-            instBox=(150,150,440,50)
+            textBox=(40,80,560,560)
+            textObj=pygame.font.Font(None,30)
+            text=textObj.render("Build roads by selecting 2 points and clicking 'road'",False,black)
+            gamewindow.blit(text,textBox)
+
+            textBox=(40,120,560,560)
+            textObj=pygame.font.Font(None,30)
+            text=textObj.render("Build cities by selecting a point and clicking 'city'",False,black)
+            gamewindow.blit(text,textBox)
+
+            textBox=(40,160,560,560)
+            textObj=pygame.font.Font(None,30)
+            text=textObj.render("You will start with 2 roads and 2 cities",False,black)
+            gamewindow.blit(text,textBox)
+
+            textBox=(40,200,560,560)
+            textObj=pygame.font.Font(None,30)
+            text=textObj.render("They are placed randomly, good luck",False,black)
+            gamewindow.blit(text,textBox)            
+
+            textBox=(40,240,560,560)
+            textObj=pygame.font.Font(None,30)
+            text=textObj.render("Each city will give you one point, first player to ten points wins",False,black)
+            gamewindow.blit(text,textBox)
+
+            instBox=(150,350,440,50)
             instText=pygame.font.Font(None,30)
             instruction=instText.render('Choose how many players:',False,grey)
             gamewindow.blit(instruction,instBox)
@@ -90,10 +118,16 @@ def main():
                 if button.checkForMouse(mousex,mousey)==True and mouseClicked==True:
                     for i in range(button.function):
                         players.append(player(i))
+                        currentplayer=button.function-1
                     screen = 'main'
+                    startWithRandomBuildings()
 
-                                  
-            
+            instBox=(650,550,440,50)
+            instText=pygame.font.Font(None,23)
+            instruction=instText.render('Greg, Steven, Zhao',False,grey)
+            gamewindow.blit(instruction,instBox)
+
+
         if screen == 'main':
             
             drawBoard() #function that keeps the board updated
@@ -117,6 +151,18 @@ def main():
             if nextTurnButton.checkForMouse(mousex,mousey)==True and mouseClicked==True:
                 nextTurn()
 
+            if error==True:
+                errorTimer+=1
+
+                textBox=(600,60,560,20)
+                textObj=pygame.font.Font(None,30)
+                text=textObj.render("You can't do that!",False,black)
+                gamewindow.blit(text,textBox)
+
+            if errorTimer>60:
+                error=False
+                errorTimer=0
+
                 
 
 
@@ -126,19 +172,82 @@ def main():
 def makeCoord(): # sets up initial coordinates
     coords=[]
     keeps='000001100000000110011000011001100110100110011001011001100110100110011001011001100110100110011001011001100110000110011000000001100000'
-    print(len(keeps))
+    
     for x in range(640)[60::53]:
         for y in range(480)[20::39]:
             coords.append(coordinate(x,y))
     for cord in coords:
         if keeps[coords.index(cord)]=='1':
-            cord.status=5
+            cord.status.add(5)
         
     return coords
 
+def startWithRandomBuildings():
+    
+    choosePoints=[]
+    initial=[50,74,39,63,87,40,64,88,29,53,77,30,54,78,102,43,67,91,44,68,92,57,81]
+    serpentine=[]
+    used=[0]
+    for i in range(len(players)):
+        serpentine.append(i)
+        serpentine.append(i)
+        
+    for cord in coords:
+        if 5 in cord.status:
+            choosePoints.append(coords.index(cord))
+            
+    for player in serpentine:
+
+        use=True
+
+        point=random.choice(initial)
+
+        for a in used:
+            if (point-a) in [1,11,13,-1,-11,-13]:
+                use=False
+                
+        while use==False:
+            test=[]
+            point=random.choice(initial)
+            for a in used:
+                test.append(point-a)
+            use=True
+            for a in test:
+                if a in [1,11,13,-1,-11,-13]:
+                    use=False
+            
+            textBox=(300,500,400,50)
+            textObj=pygame.font.Font(None,30)
+            gamewindow.fill(white)
+            text=textObj.render("Loading... randomizing player {}".format(player+1),False,blue)
+            gamewindow.blit(text,textBox)
+            pygame.display.update()
+            
+        used.append(point)
+        initial.remove(point)
+        
+        point2=0
+        while point2 not in choosePoints:
+            
+            point2=point+random.choice([1,11,13,-1,-11,-13])
+
+            textBox=(300,500,400,50)
+            textObj=pygame.font.Font(None,30)
+            gamewindow.fill(white)
+            text=textObj.render("Loading... randomizing player {}".format(player+1),False,blue)
+            gamewindow.blit(text,textBox)
+            pygame.display.update()
+
+        
+        road=construction('road',[point,point2])
+        road.player=player
+        city=construction('city',[point])
+        city.player=player
+        buildings.append(city)
+        buildings.append(road)
+                               
+
 def getCoord(x,y):
-    # returns which coordinate the mouse is
-    # over (when passed the mouse's coordinates)
     
     for cord in coords:
         left = cord.x -3
@@ -155,7 +264,10 @@ def drawBoard(): # draws and updates the board
         plist=[]
         for p in tile.points:
             plist.append((coords[p].x,coords[p].y))
-        pygame.draw.polygon(gamewindow,resourceTile.colors[resourceTile.resources.index(tile.rec)],plist)
+        if tile.dice==0:
+            pygame.draw.polygon(gamewindow,(168,30,8),plist)
+        else:
+            pygame.draw.polygon(gamewindow,resourceTile.colors[resourceTile.resources.index(tile.rec)],plist)
         pygame.draw.polygon(gamewindow,white,plist,5)
         diceNumObj=pygame.font.Font(None,30)
         diceNum=diceNumObj.render(str(tile.dice),False,black)
@@ -241,12 +353,17 @@ def drawBoard(): # draws and updates the board
     # dice roll box
     diceTxtBox=(30,455,60,20)
     diceTxt=pygame.font.Font(None,30)
-    diceNum=diceTxt.render('dice number: {}'.format(dice),False,black)
+    diceNum=diceTxt.render('Dice Number: {}'.format(dice),False,black)
     gamewindow.blit(diceNum,diceTxtBox)
+
+    turnTxtBox=(10,10,60,20)
+    turnTxt=pygame.font.Font(None,30)
+    turnNum=turnTxt.render('Turn: {}'.format(turncount),False,black)
+    gamewindow.blit(turnNum,turnTxtBox)
 
     for cord in coords:
         cord.update()
-        if cord.status!=0:
+        if len(cord.status)>0:
             pygame.draw.circle(gamewindow,cord.color,(cord.x,cord.y),4)
 
 def nextTurn():
@@ -289,6 +406,7 @@ class buildButton:
         
 
 def buildcity(): # builds a city
+    global error
     citynear=False
     selected=[]
         
@@ -298,20 +416,26 @@ def buildcity(): # builds a city
         
     for city in buildings: # check for cities within 1 space
         if city.kind=='city':
-            if abs(city.points[0]-coords.index(selected[0])) in [1,11,13]:
+            if abs(city.points[0]-coords.index(selected[0])) in [0,1,11,13]:
                 citynear=True
 
-    if citynear==False and selected[0].status==currentplayer+1: # if the space is buildable, then build
+    if citynear==False and currentplayer+1 in selected[0].status: # if the space is buildable, then build
         if players[currentplayer].rec['wheat']>=1 and players[currentplayer].rec['stone']>=1 and players[currentplayer].rec['wood']>=1 and players[currentplayer].rec['brick']>=1:
             buildings.append(construction('city',[coords.index(selected[0])]))
             players[currentplayer].rec['wheat']-=1
             players[currentplayer].rec['stone']-=1
             players[currentplayer].rec['brick']-=1
             players[currentplayer].rec['wood']-=1
+            players[currentplayer].points+=1
+        else:
+            error=True
+    else:
+        error=True
     selected[0].selected=False
 
 
 def buildroad(): # builds a road
+    global error
     points=[]
     for cord in coords:
         if cord.selected==True:
@@ -321,17 +445,27 @@ def buildroad(): # builds a road
     b=0
     if len(points)>1:
         b=points[1]
+
+    roads=[]
+    for road in buildings:
+        if road.kind=='road':
+            roads.append(set(road.points))
     
-    if (coords[a].status==currentplayer+1 or coords[b].status==currentplayer+1 or turncount==0) and (abs(a-b) in [1,11,13]) and len(points)>1 and players[currentplayer].rec['brick']>=1 and players[currentplayer].rec['wood']>=1:
+    if (currentplayer+1 in coords[a].status or currentplayer+1 in coords[b].status) and set([a,b]) not in roads and (abs(a-b) in [1,11,13]) and len(points)>1 and players[currentplayer].rec['brick']>=1 and players[currentplayer].rec['wood']>=1:
         buildings.append(construction('road',[a,b]))
         players[currentplayer].rec['wood']-=1
         players[currentplayer].rec['brick']-=1
+    else:
+        error=True
     coords[a].selected=False
     coords[b].selected=False
     
 
         
 class construction: # class to keep track of buildings (road,city)
+
+    global currentplayer
+    
     def __init__(self,kind,points):
         self.kind=kind
         self.points=points
@@ -339,6 +473,7 @@ class construction: # class to keep track of buildings (road,city)
 
 class resourceTile: # class to keep track of resource tiles (hexagons)
     resources=['wheat','wood','brick','stone']
+    recdic={'wheat':0,'wood':0,'brick':0,'stone':0}
     colors=[(227,169,34),(176,121,58),(212,91,51),(168,168,168)]
     diceNumbers=[6,4,6,3,5,3,5,11,2,0,8,9,4,10,9,10,8,11,12]
     N=0
@@ -347,7 +482,16 @@ class resourceTile: # class to keep track of resource tiles (hexagons)
         self.points=points
         self.num=resourceTile.N
         resourceTile.N+=1
-        self.rec=random.choice(resourceTile.resources)
+        choose=[]
+        for rec in resourceTile.recdic:
+            if resourceTile.recdic[rec]<4:
+                choose.append(rec)
+        if len(choose)>0:
+            self.rec=random.choice(choose)
+        else:
+            self.rec=random.choice(resourceTile.resources)
+        resourceTile.recdic[self.rec]+=1
+        
         self.dice=resourceTile.diceNumbers[self.num]
         self.box=((coords[points[0]].x+45,coords[points[0]].y+10),(40,40))
 
@@ -363,8 +507,8 @@ class player:
 
     def __init__(self,num):
          self.num = num
-         self.points = 0
-         self.rec={'wheat':1,'wood':2,'brick':2,'stone':1}
+         self.points = 2
+         self.rec={'wheat':0,'wood':0,'brick':0,'stone':0}
          self.color=player.colors[num]
    
 
@@ -375,8 +519,8 @@ class coordinate: # class for the coordinates
     def __init__(self,x,y):
         self.x=x
         self.y=y
-        self.status=0
-        self.color=coordinate.colors[self.status]
+        self.status=set()
+        self.color=black
         self.selected=False
 
     def update(self):
@@ -385,11 +529,11 @@ class coordinate: # class for the coordinates
         for road in buildings:
             if road.kind=='road':
                 if coords.index(self) in road.points:
-                    self.status=road.player+1
+                    self.status.add(road.player+1)
         if self.selected==True:
             self.color=blue
         else:
-            self.color=coordinate.colors[self.status]
+            self.color=black
 
 
 if __name__ == '__main__':
